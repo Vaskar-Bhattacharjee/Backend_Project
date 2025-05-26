@@ -6,6 +6,7 @@ const asyncHandler = (requestHandler) => {
         ).catch((err) => next(err))
     }
 }
+export default asyncHandler;
 
 // const asyncHandler = (requestHandler) => {
 //     (req, res, next) => {
