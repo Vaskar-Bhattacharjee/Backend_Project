@@ -1,6 +1,6 @@
 import ApiError from "../utils/ApiErorr";
 import asyncHandler from "../utils/asyncHandler";
-import jwt from "jsonwebtoken"
+import jwt from 'jsonwebtoken';
 import User from "../models/user.model";
 
 export const verifyJWT = asyncHandler(async (req, res, next) => {
@@ -21,7 +21,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
         req.user = user
         next()
     } catch (error) {
-        throw new ApiError(401, error?.message || 'Token not found')
+        throw new ApiError(401, error?.message || 'Invalid token')
     }
     
 })
