@@ -276,26 +276,101 @@ const registerUser = asyncHandler(async (req, res) => {
      })
      //avatar update section ends here
 
-     const coverImageUpdate = asyncHandler(async(req, res) =>{
-        const coverImageLocalPath = req.file?.path
-        if (!coverImageLocalPath) {
-          throw new ApiError(400, "Cover image is missing")
-        }
-        const uploadCoverImage = await uploadOnCloudinary(coverImageLocalPath)
-        if (!uploadCoverImage.url) {
-          throw new ApiError(400, "Error when uploading cover image")          
-        }
+    const coverImageUpdate = asyncHandler(async(req, res) =>{
+      const coverImageLocalPath = req.file?.path
+      if (!coverImageLocalPath) {
+        throw new ApiError(400, "Cover image is missing")
+      }
+      const uploadedCoverImage = await uploadOnCloudinary(coverImageLocalPath)
+      if (!uploadedCoverImage.url) {
+        throw new ApiError(400, "Error when uploading cover image")          
+      }
+      const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+          $set: {
+            coverImage: uploadedCoverImage.url
+          }        
+        },
+        {new: true}
+      ).select("-password")
 
-        const user = await User.findByIdAndUpdate(
-          req.user?._id,
-          {},
-          {new: true}
-        ).select("-password")
-        return res
-        .status(200)
-        .json(new ApiResponse(200, user, "Cover image updated successfully"))
-     })
+      return res
+      .status(200)
+      .json(new ApiResponse(200, user, "Cover image updated successfully"))
+    })
      //cover image update section ends here
+
+     const getUserChannelProfile = asyncHandler(async(req, res) =>{
+      const {username} = req.params
+
+      if (!username?.trim()) {
+        throw new ApiError(400, "username is missing")        
+      }
+      const channel = await User.aggregate([
+        {
+          $match: {
+            username: username?.toLowerCase(),
+          }
+        },
+        {
+          $lookup: {
+            from: "subscriptions",
+            localField: "_id",
+            foreignField: "channel",
+            as: "subscribers"
+          }
+        },
+      {
+        $lookup: {
+          from: "subscriptions",
+            localField: "_id",
+            foreignField: "subscriber",
+            as: "subscribeTo"
+        }
+      },
+      {
+        $addFields: {
+          subscribersCount: {
+            $size: "$subscribers"
+          },
+          channelSubscribeToCount: {
+            $size: "$subscribeTo"
+          },
+          isSubscribed: {
+             $cond: {
+               if: {
+                 $in: [
+                   req.user?._id,
+                   "$subscribers.subscriber"
+                 ]
+               },
+               then: true,
+               else: false
+             }
+        }
+      }
+    },
+    {
+      $project: {
+        fullname: 1,
+        username: 1,
+        avatar: 1,
+        subscribersCount: 1,
+        channelSubscribeToCount: 1,
+        isSubscribed: 1
+      }
+    }        
+      ])
+      if (!channel?.length) {
+        throw new ApiError(404, "Channel not found")
+      }
+
+      return res
+      .status(200)
+      .json(new ApiResponse(200, channel, "Channel profile fetched successfully"))
+
+     })
         
 
 
