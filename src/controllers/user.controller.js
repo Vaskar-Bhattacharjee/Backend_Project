@@ -9,10 +9,11 @@ const generateAccessAndRefreshTokens = async (userId) => {
 
   try {
     const user = await User.findById(userId)
-    const accessToken = user.generateAccessToken()
-    const refreshToken = user.generateRefreshToken()
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
 
     user.refreshToken = refreshToken
+    user.accessToken = accessToken
     await user.save({validateBeforeSave: false})
     return {accessToken, refreshToken}
 
@@ -53,19 +54,25 @@ const registerUser = asyncHandler(async (req, res) => {
   }
   // validation for existing user completed
 
-  const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  const avatarLocalPath = req.files?.avatar[0]?.path;  
+ 
   if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar is required");
+    throw new ApiError(400, "Avatar is required in registration");
   }
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+  console.log("avatar url check: ", avatar);
+  
+  if (!avatar) {
+    throw new ApiError(400, "Avatar not uploaded in cloudinary");
+   }
+
+  
+  const coverImageLocalPath = req.files?.coverImage[0]?.path;
   if (!coverImageLocalPath) {
     throw new ApiError(400, "Cover image is required");
   }
- const avatar= await uploadOnCloudinary(avatarLocalPath);
  const coverImage =  await uploadOnCloudinary(coverImageLocalPath);
- if (!avatar) {
-  throw new ApiError(400, "Avatar is required");
- }
+
  if (!coverImage) {
   throw new ApiError(400, "Cover image is required");
   
@@ -75,10 +82,23 @@ const registerUser = asyncHandler(async (req, res) => {
    email,
    fullname,
    password,
-   avatar: avatar.url,
-   coverImage: coverImage.url?.url || "",
+   avatar,
+   coverImage
+ })
+
+ return res.status(200).json({
+   success: true,
+   message: "User created successfully",
+   data: {
+     username: username.toLowerCase(),
+     email,
+     fullname,
+     avatar: avatar,
+     coverImage: coverImage
+   },
  })
 });
+
 //login user section starts here 
     const loginUser = asyncHandler(async(req, res) =>{
       //req.body -> data
@@ -89,19 +109,21 @@ const registerUser = asyncHandler(async (req, res) => {
       //send cookie
 
       const {email, password, username} = req.body
-      if (!(username || email)) {
-        throw new ApiError(400, "username or email is required");
+      if (!(username || email || password)) {
+        throw new ApiError(400, "username or email or password is required");
       }
       const user = await User.findOne({ 
         $or: [{username}, {email}]
       })
+      console.log("user: ", user);
+      
       if (!user) {
-        throw new ApiError(404, "User does not exist")
+        throw new ApiError(404, "User does not exist via email and username");
       }
       const isPasswordValid = await user.isPasswordCorrect(password)
 
       if (!isPasswordValid) {
-        throw new ApiError(401, "Invalid user credentials");
+        throw new ApiError(401, "password wrong");
         
        }
 
@@ -110,7 +132,7 @@ const registerUser = asyncHandler(async (req, res) => {
        select("-password -refreshToken")
        const options = {
          httpOnly : true,
-         secure: true,
+         secure: false,
        }
        return res.status(200)
        .cookie("accessToken", accessToken, options)
@@ -143,7 +165,7 @@ const registerUser = asyncHandler(async (req, res) => {
       )
       const options = {
         httpOnly : true,
-        secure: true,
+        secure: false,
       }
       return res
       .status(200)
@@ -227,7 +249,7 @@ const registerUser = asyncHandler(async (req, res) => {
      //get current user section ends here
      const updateAccountDetails = asyncHandler(async(req, res) =>{
        const {fullname, email} = req.body
-       if (!fullname || !email) {
+       if (!(fullname || email)) {
         throw new ApiError(400, "fullname and email are required")
        }
       const user = await User.findByIdAndUpdate(

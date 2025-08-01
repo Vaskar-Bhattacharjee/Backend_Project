@@ -8,9 +8,9 @@ class ApiResponse {
         this.statusCode = statusCode;
         this.data = data;
         this.message = message;
-        this.success = statusCode < 400;
+        this.success = statusCode < 400;        
+        //this.errors = errors; {errors make problem if i use it. 500 error will be shown. because no error was passed on longin side} 
         
-        this.errors = errors;
     }
 }
 

@@ -9,14 +9,16 @@ import { refreshAccessToken } from "../controllers/user.controller.js";
 const router = Router();
 router.route("/register").post(
     upload.fields([
-     {
+        {
+            name: "coverImage",
+            maxCount: 1
+        },
+     
+        {
          name: "avatar",
          maxCount: 1
      },
-     {
-         name: "coverImage",
-         maxCount: 1
-     }  
+     
     ]),
     registerUser
 );
@@ -28,7 +30,7 @@ router.route("/current-user").get(verifyJwt, getCurrentUser);
 router.route("/update-user").patch(verifyJwt, updateAccountDetails);
 router.route("/avatar").patch(verifyJwt, upload.single("avatar"), avatarUpdate);
 router.route("/cover-image").patch(verifyJwt, upload.single("coverImage"), coverImageUpdate);
-router.route("/c/:username").get(verifyJwt, getUserChannelProfile);
+router.route("/c/username").get(verifyJwt, getUserChannelProfile);
 router.route("/history").get(verifyJwt, getWatchHistory);
 
 export default router;
