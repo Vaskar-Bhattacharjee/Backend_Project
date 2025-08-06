@@ -216,7 +216,8 @@ const registerUser = asyncHandler(async (req, res) => {
         })
 //refresh access token section ends here
 
-     const changeCurrentPassword = asyncHandler(async(req, res) =>{
+     const changeCurrentPassword = asyncHandler(async(req, res) =>{ 
+      
        const {currentPassword, newPassword} = req.body
        const user = await User.findById(req.user?._id)
        const isPasswordValid = await user.isPasswordCorrect(currentPassword)

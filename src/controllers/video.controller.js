@@ -9,11 +9,114 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
+    const options = {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        sort: {
+            [sortBy || "createdAt"]: sortType || "desc",
+        }
+    }
+    const videoAggregate = [
+        {
+            $match: {
+                $and: [
+                    {isPublished: true},
+                    {
+                        $text: {
+                            $search: query
+                        }
+                    }
+                ]
+            }
+        },
+        {
+                $addFields: {
+                    score: {
+                        $meta: "textScore"
+                    }
+                }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "creator",
+                foreignField: "_id",
+                as: "creator",
+                pipeline: [
+                    {
+                        $project: {
+                            fullname: 1,
+                            avatar: 1,
+                        }
+                    }
+                ] //pipeline to get fullname and avatar, without pipeline it will return whole docs of user.
+            }
+        }
+        
+    ]
+    const videos = await Video.aggregate(videoAggregate)
+    .skip((options.page - 1) * options.limit)
+    .limit(options.limit)
+
+    if(!videos) {
+        throw new ApiError(404, "No videos found while fetching")
+    }
+    res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            videos,
+            "Videos fetched successfully"
+        )
+    )
+ //TODO: get all videos based on query, sort, pagination
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description} = req.body
+
+    if (!title) {
+        throw new ApiError( 400, "title should not be empty")
+    };
+    if (!description) {
+        throw new ApiError( 400, "description should not be empty")
+    };
+    const  videoLocalPath = req.files?.videoFile[0]?.path
+    if (!videoLocalPath) {
+        throw new ApiError ( 400, "No videos submitted there")
+    } 
+    const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
+    if (!thumbnailLocalPath) {
+        throw new ApiError ( 400, "No Thumbnail submitted there")
+    }
+    const [ video, thumbnail ] = await Promise.all([
+        uploadOnCloudinary(videoLocalPath, {resource_type: "video"})
+        .catch(err => {
+            throw new ApiError( 400, "Video not uploaded in cloudinary")
+        }),
+        uploadOnCloudinary(thumbnailLocalPath)
+        .catch(err => {
+            throw new ApiError( 400, "Thumbnail not uploaded in cloudinary")
+        }),
+    ])
+    const duration = await video.duration;
+    const videoDocs = await Video.create({
+        title,
+        description,
+        videoFile: video,
+        thumbnail,
+        owner: req.user._id,
+        isPublished: true,
+        duration
+
+    })
+    if (!videoDocs) {
+        throw new ApiError( 400, "Video not uploaded")
+    }
+    res
+    .status(201)
+    .json(new ApiResponse(200, videoDocs, "Video uploaded successfully"))
     // TODO: get video, upload to cloudinary, create video
 })
 
