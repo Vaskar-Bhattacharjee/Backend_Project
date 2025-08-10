@@ -140,8 +140,67 @@ const getVideoById = asyncHandler(async (req, res) => {
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    //TODO: update video details like title, description, thumbnail
+    try {
+        const { videoId } = req.params
+        if (!isValidObjectId(videoId)) {
+            throw new ApiError(400, "Invalid video ID");
+        }
+        const video = await Video.findById(videoId)
+        if (!video) {
+            throw new ApiError(404, "Video not found");
+        }
+        if (video.owner.toString() !== req.user._id.toString()) {
+            throw new ApiError(403, "Unauthorized access");
+        }
+        //-------------------------
+        const { title, description } = req.body
+        const updates = {}
+        if (typeof title !== "undefined") updates.title = title
+        if (typeof description !== "undefined") updates.description = description
+    
+      
+        const videoLocalPath = req.files?.videoFile?.[0]?.path;   
+        const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path
+     
+        if (videoLocalPath) {
+            const videoFile = await uploadOnCloudinary(videoLocalPath, {resource_type: "video"})
+            if (!videoFile) {
+                throw new ApiError( 400, "Video not uploaded in cloudinary")
+            }
+            updates.videoFile = videoFile
+            fs.unlink(videoLocalPath, (err) => {
+                if (err) console.error("Failed to delete temp video:", err);
+            });
+        }    
+        if (thumbnailLocalPath) {
+            const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+            if (!thumbnail) {
+                throw new ApiError( 400, "Thumbnail not uploaded in cloudinary")
+            }
+            updates.thumbnail = thumbnail
+            fs.unlink(thumbnailLocalPath, (err) => {
+                if (err) console.error("Failed to delete temp video:", err);
+            });
+        } 
+        if (Object.keys(updates).length !== 0) {
+            let updatedVideo = await Video
+            .findByIdAndUpdate(
+            videoId,
+            updates,
+            { new: true }
+        )
+        return res
+        .status(200)
+        .json(new ApiResponse(200, updatedVideo, "Video updated successfully"))
+        } else {
+            throw new ApiError( 400, "Nothing updated there")
+        }
+       
+    } catch (error) {
+        throw new ApiError ( 500, error.message)
+    }
+       
+     
 
 })
 
