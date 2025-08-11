@@ -1,10 +1,11 @@
 import mongoose, {isValidObjectId} from "mongoose"
 import {Video} from "../models/video.model.js"
-import {User} from "../models/user.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import { v2 as cloudinary } from 'cloudinary';
+
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -136,7 +137,6 @@ const getVideoById = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, videoFindById, "Video fetched successfully"))
 
-    //TODO: get video by id
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
@@ -183,11 +183,11 @@ const updateVideo = asyncHandler(async (req, res) => {
             });
         } 
         if (Object.keys(updates).length !== 0) {
-            let updatedVideo = await Video
-            .findByIdAndUpdate(
-            videoId,
-            updates,
-            { new: true }
+        let updatedVideo = await Video
+        .findByIdAndUpdate(
+        videoId,
+        updates,
+        { new: true }
         )
         return res
         .status(200)
@@ -198,19 +198,57 @@ const updateVideo = asyncHandler(async (req, res) => {
        
     } catch (error) {
         throw new ApiError ( 500, error.message)
-    }
-       
-     
-
+    }   
 })
 
+const extractPublicId = (url) => {
+    if (!url) return null;
+    const clean = url.split("?")[0];
+    const m = clean.match(/\/upload\/(?:.*?\/)?(?:v\d+\/)?(.+)\.[^/.]+$/);
+    return m ? decodeURIComponent(m[1]) : null;
+  };
+  
 const deleteVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params
-    //TODO: delete video
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video ID");
+    }
+    const video = await Video.findById(videoId)
+    if (!video) {
+        throw new ApiError(404, "Video not found");
+    }
+    if (video.owner.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "Unauthorized access");
+    }
+   
+
+    const videoFilePublicId = extractPublicId(video.videoFile);
+    const thumbnailPublicId = extractPublicId(video.thumbnail);
+    
+    if (videoFilePublicId) {
+        const result = await cloudinary.uploader.destroy(videoFilePublicId);
+        if (result.result !== "ok" && result.result !== "not found") {
+            throw new ApiError(400, "Video not deleted from Cloudinary");
+        }
+    }
+
+    if (thumbnailPublicId) {
+        const result = await cloudinary.uploader.destroy(thumbnailPublicId);
+        if (result.result !== "ok" && result.result !== "not found") {
+            throw new ApiError(400, "Thumbnail not deleted from Cloudinary");
+        }
+    }
+    const deletedVideo = await Video.findByIdAndDelete(videoId)
+    
+    res
+    .status(200)
+    .json(new ApiResponse(200, deletedVideo, "Video deleted successfully"))
+    
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
+
 })
 
 export {
