@@ -32,7 +32,14 @@ router.route("/")
     );
 router.route("/:videoId")
     .get(getVideoById)
-    .patch(updateVideo)
+    .patch(
+        upload.fields([
+            { name: "videoFile", maxCount: 1 },
+            { name: "thumbnail", maxCount: 1 }
+          ]),
+        updateVideo)
     .delete(deleteVideo)
-    .post(togglePublishStatus)
+    
+    router.route("/toggle/publish/:videoId").patch(togglePublishStatus);
+
 export default router

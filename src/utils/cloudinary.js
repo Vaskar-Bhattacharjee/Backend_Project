@@ -19,7 +19,6 @@ dotenv.config();
     console.log("api secret: ", process.env.CLOUDINARY_API_SECRET);
     const uploadOnCloudinary = async (localFilePath) => {
         try {
-            console.log("localFilePath: ", localFilePath)
             if (!localFilePath) return null;
             console.log(localFilePath)
             const response = await cloudinary.uploader.upload(localFilePath, {

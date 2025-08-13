@@ -1,12 +1,10 @@
-import mongoose, {isValidObjectId} from "mongoose"
-import {Video} from "../models/video.model.js"
-import {ApiError} from "../utils/ApiError.js"
-import {ApiResponse} from "../utils/ApiResponse.js"
-import {asyncHandler} from "../utils/asyncHandler.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import {isValidObjectId} from "mongoose"
+import  Video  from "../models/video.model.js"
+import  ApiError from "../utils/ApiError.js"
+import  ApiResponse  from "../utils/ApiResponse.js"
+import  asyncHandler  from "../utils/asyncHandler.js"
+import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { v2 as cloudinary } from 'cloudinary';
-
-
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
@@ -140,7 +138,7 @@ const getVideoById = asyncHandler(async (req, res) => {
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
-    try {
+    
         const { videoId } = req.params
         if (!isValidObjectId(videoId)) {
             throw new ApiError(400, "Invalid video ID");
@@ -195,10 +193,7 @@ const updateVideo = asyncHandler(async (req, res) => {
         } else {
             throw new ApiError( 400, "Nothing updated there")
         }
-       
-    } catch (error) {
-        throw new ApiError ( 500, error.message)
-    }   
+          
 })
 
 const extractPublicId = (url) => {
