@@ -83,7 +83,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
       if (!playlist) {
         throw new ApiError(400, " There is no such playlist ")
       }
-      if (req.user && playlist.owner.toString() !== req.user._id.toString()) {
+      if (req.user && playlist.creator.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not allowed to modify this playlist");
       }
       if (playlist.videos.includes(videoId)) {
@@ -94,11 +94,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 
       return res
       .status(200)
-      .ApiResponse(
-        200, 
-        [],
-        "Video added to the playlist"
-      )
+      .json(new ApiResponse(200, playlist, "Video added succesfully to the playlist"));
 })
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
@@ -116,7 +112,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     }
     return res
       .status(200)
-      .ApiResponse(200, updatedPlaylist, "Video removed succesfully from the playlist");
+      .json(new ApiResponse(200, updatedPlaylist, "Video removed succesfully from the playlist"))
 
 })
 
@@ -159,7 +155,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
       }
       return res
         .status(200)
-        .ApiResponse(200, updatedPlaylist, "Playlist updated successfully");
+        .json(new ApiResponse(200, updatedPlaylist, "Playlist updated successfully"))
 })
 
 export {
