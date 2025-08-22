@@ -23,6 +23,10 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         video: videoId,
         user: userId
     });
+    if (!newLike) {
+        throw new ApiError(500, "Failed to like video")
+        
+    }
     return res
     .status(200)
     .json(new ApiResponse(200, "Video liked"));
